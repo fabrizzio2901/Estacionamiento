@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  name      String
+  role      Role      @default(DRIVER)
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  sessions  Session[]
+  payments  Payment[]
+}
+
+model ParkingSpace {
+  id        String      @id @default(uuid())
+  number    Int         @unique
+  sensorId  String      @unique
+  status    SpaceStatus @default(FREE)
+  enabled   Boolean     @default(true)
+  floor     Int         @default(1)
+  zone      String      @default("A")
+  sessions  Session[]
+  updatedAt DateTime    @updatedAt
+}
+
+model PricingRule {
+  id          String   @id @default(uuid())
+  name        String
+  type        PricingType @default(HOURLY)
+  pricePerHour Float?
+  ranges      Json?    // [{ fromHour: 0, toHour: 2, price: 20 }, ...]
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Session {
+  id             String        @id @default(uuid())
+  userId         String
+  parkingSpaceId String
+  entryTime      DateTime      @default(now())
+  exitTime       DateTime?
+  durationMins   Int?
+  status         SessionStatus @default(ACTIVE)
+  user           User          @relation(fields: [userId], references: [id])
+  parkingSpace   ParkingSpace  @relation(fields: [parkingSpaceId], references: [id])
+  payment        Payment?
+  createdAt      DateTime      @default(now())
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  sessionId       String        @unique
+  userId          String
+  amount          Float
+  status          PaymentStatus @default(PENDING)
+  method          String?
+  stripePaymentId String?
+  stripeClientSecret String?
+  createdAt       DateTime      @default(now())
+  session         Session       @relation(fields: [sessionId], references: [id])
+  user            User          @relation(fields: [userId], references: [id])
+}
+
+enum Role {
+  ADMIN
+  DRIVER
+}
+
+enum SpaceStatus {
+  FREE
+  OCCUPIED
+}
+
+enum SessionStatus {
+  ACTIVE
+  COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum PricingType {
+  HOURLY
+  RANGES
+}

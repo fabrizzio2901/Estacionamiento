@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #0A0A0F;
+    color: #E8E8F0;
+    font-family: 'DM Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #12121A;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #2A2A3E;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #6C63FF;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-parking-card border border-parking-border rounded-2xl backdrop-blur-sm;
+  }
+
+  .btn-primary {
+    @apply bg-parking-accent hover:bg-opacity-90 text-white font-display font-semibold 
+           px-6 py-3 rounded-xl transition-all duration-200 
+           hover:shadow-lg hover:shadow-parking-accent/30 active:scale-95;
+  }
+
+  .btn-ghost {
+    @apply border border-parking-border hover:border-parking-accent text-parking-muted 
+           hover:text-white px-6 py-3 rounded-xl transition-all duration-200 font-body;
+  }
+
+  .space-free {
+    background: linear-gradient(135deg, rgba(0, 229, 160, 0.15) 0%, rgba(0, 229, 160, 0.05) 100%);
+    border-color: rgba(0, 229, 160, 0.4);
+    box-shadow: 0 0 12px rgba(0, 229, 160, 0.15);
+  }
+
+  .space-occupied {
+    background: linear-gradient(135deg, rgba(255, 59, 92, 0.15) 0%, rgba(255, 59, 92, 0.05) 100%);
+    border-color: rgba(255, 59, 92, 0.4);
+    box-shadow: 0 0 12px rgba(255, 59, 92, 0.15);
+  }
+
+  .stat-card {
+    @apply glass-card p-5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-0.5;
+  }
+
+  .noise-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    z-index: 9999;
+  }
+}
+
+/* Animaciones de entrada para los cajones */
+@keyframes spaceFlash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.space-just-changed {
+  animation: spaceFlash 0.6s ease-in-out;
+}
