@@ -1,6 +1,13 @@
+/**
+ * DriverPanel actualizado:
+ * - RF-04: Integra el botón "Mostrar QR de Acceso"
+ * - RF-01: Muestra el saldo de la billetera virtual
+ * - RF-03: Indicador visual de saldo negativo
+ */
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import QRAccessCard from './QRAccessCard';
 
 function formatDuration(mins) {
   if (mins < 60) return `${mins} min`;
@@ -13,6 +20,8 @@ export default function DriverPanel() {
   const { user } = useAuth();
   const [sessionData, setSessionData] = useState(null);
   const [history, setHistory] = useState([]);
+  const [walletBalance, setWalletBalance] = useState(null);
+  const [isNegative, setIsNegative] = useState(false);
   const [loading, setLoading] = useState(true);
   const [liveMinutes, setLiveMinutes] = useState(0);
   const [liveCost, setLiveCost] = useState(0);
@@ -21,22 +30,23 @@ export default function DriverPanel() {
     Promise.all([
       axios.get('/api/sessions/active'),
       axios.get('/api/sessions/history'),
+      axios.get('/api/wallet/balance'),
     ])
-      .then(([activeRes, historyRes]) => {
+      .then(([activeRes, historyRes, walletRes]) => {
         setSessionData(activeRes.data);
         setHistory(historyRes.data);
+        setWalletBalance(walletRes.data.balance);
+        setIsNegative(walletRes.data.isNegative);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
-  // Actualizar costo en tiempo real si hay sesión activa
+  // Costo en tiempo real
   useEffect(() => {
     if (!sessionData?.session) return;
-
     const entryTime = new Date(sessionData.session.entryTime);
     const tarifaHora = sessionData.tarifaHora || 20;
-
     const tick = () => {
       const now = new Date();
       const diffMs = now - entryTime;
@@ -45,9 +55,8 @@ export default function DriverPanel() {
       setLiveMinutes(diffMins);
       setLiveCost(parseFloat((diffHours * tarifaHora).toFixed(2)));
     };
-
     tick();
-    const interval = setInterval(tick, 30000); // actualizar cada 30s
+    const interval = setInterval(tick, 30000);
     return () => clearInterval(interval);
   }, [sessionData]);
 
@@ -68,6 +77,37 @@ export default function DriverPanel() {
     <div className="space-y-6 animate-fade-up">
       <h2 className="font-display text-2xl font-bold text-white">Mi Estancia</h2>
 
+      {/* RF-01: Saldo de billetera — resumen compacto */}
+      {walletBalance !== null && (
+        <div className={`glass-card p-4 flex items-center justify-between ${
+          isNegative ? 'border-parking-occupied/30' : 'border-parking-free/20'
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+              isNegative ? 'bg-parking-occupied/20' : 'bg-parking-free/20'
+            }`}>
+              <svg className={`w-4 h-4 ${isNegative ? 'text-parking-occupied' : 'text-parking-free'}`}
+                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xs text-parking-muted font-mono">Billetera Virtual</p>
+              {/* RF-03: rojo si negativo */}
+              <p className={`font-display font-bold ${isNegative ? 'text-parking-occupied' : 'text-white'}`}>
+                ${walletBalance.toFixed(2)} MXN
+                {isNegative && <span className="text-xs font-body ml-1">— Saldo pendiente</span>}
+              </p>
+            </div>
+          </div>
+          <span className="text-xs text-parking-muted font-mono">→ tab Billetera</span>
+        </div>
+      )}
+
+      {/* RF-04/05/06: Tarjeta QR */}
+      <QRAccessCard />
+
       {/* Sesión activa */}
       {sessionData?.session ? (
         <div className="glass-card p-6 border-parking-free/30">
@@ -78,10 +118,14 @@ export default function DriverPanel() {
                 <span className="text-xs font-mono text-parking-free uppercase tracking-widest">Sesión Activa</span>
               </div>
               <h3 className="font-display text-xl font-bold text-white">
-                Cajón {sessionData.session.parkingSpace?.number}
-                <span className="text-parking-muted text-base font-normal ml-2">
-                  Zona {sessionData.session.parkingSpace?.zone}
-                </span>
+                {sessionData.session.parkingSpace
+                  ? `Cajón ${sessionData.session.parkingSpace.number}`
+                  : 'Estancia en curso'}
+                {sessionData.session.parkingSpace && (
+                  <span className="text-parking-muted text-base font-normal ml-2">
+                    Zona {sessionData.session.parkingSpace.zone}
+                  </span>
+                )}
               </h3>
             </div>
             <div className="text-right">
@@ -94,7 +138,6 @@ export default function DriverPanel() {
             </div>
           </div>
 
-          {/* Stats en tiempo real */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-parking-surface rounded-xl p-4 text-center">
               <p className="text-xs text-parking-muted mb-1 font-mono uppercase tracking-wider">Tiempo</p>
@@ -111,7 +154,7 @@ export default function DriverPanel() {
           </div>
 
           <p className="text-xs text-parking-muted text-center mt-3">
-            El cobro se calcula al salir del cajón • Tarifa: ${sessionData.tarifaHora || 20}/hr
+            El cobro se deduce directamente de tu billetera al salir • Tarifa: ${sessionData.tarifaHora || 20}/hr
           </p>
         </div>
       ) : (
@@ -124,7 +167,7 @@ export default function DriverPanel() {
             </svg>
           </div>
           <p className="font-display text-lg font-semibold text-parking-text mb-1">Sin sesión activa</p>
-          <p className="text-sm text-parking-muted">Cuando entres a un cajón aparecerá tu estancia aquí</p>
+          <p className="text-sm text-parking-muted">Escanea tu QR en la entrada para registrar tu estancia</p>
         </div>
       )}
 
@@ -138,7 +181,9 @@ export default function DriverPanel() {
                 className="flex items-center justify-between py-3 border-b border-parking-border last:border-0">
                 <div>
                   <p className="font-medium text-parking-text text-sm">
-                    Cajón {session.parkingSpace?.number} — Zona {session.parkingSpace?.zone}
+                    {session.parkingSpace
+                      ? `Cajón ${session.parkingSpace.number} — Zona ${session.parkingSpace.zone}`
+                      : 'Estancia via QR'}
                   </p>
                   <p className="text-xs text-parking-muted font-mono">
                     {new Date(session.entryTime).toLocaleDateString('es-MX', {
@@ -158,7 +203,7 @@ export default function DriverPanel() {
                       <span className={`text-xs ${
                         session.payment.status === 'PAID' ? 'text-parking-free' : 'text-parking-gold'
                       }`}>
-                        {session.payment.status === 'PAID' ? '✓ Pagado' : 'Pendiente'}
+                        {session.payment.status === 'PAID' ? '✓ Cobrado' : 'Pendiente'}
                       </span>
                     </>
                   ) : (

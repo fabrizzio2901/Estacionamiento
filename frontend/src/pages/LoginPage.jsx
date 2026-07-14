@@ -159,13 +159,13 @@ export default function LoginPage() {
             <div className="grid grid-cols-2 gap-2 text-xs font-mono text-parking-muted">
               <div>
                 <p className="text-parking-accent">Admin</p>
-                <p>admin@parking.mx</p>
-                <p>admin123</p>
+                  <p>admin@parkiq.com</p>
+                  <p>admin123</p>
               </div>
               <div>
                 <p className="text-parking-free">Conductor</p>
-                <p>conductor@parking.mx</p>
-                <p>user123</p>
+                <p>conductor@parkiq.com</p>
+                <p>driver123</p>
               </div>
             </div>
           </div>

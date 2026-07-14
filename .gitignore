@@ -1,0 +1,24 @@
+# Dependencias de Node y React (¡Lo más pesado!)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Archivos de compilación de React
+build/
+dist/
+
+# Archivos de entorno (Variables secretas)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Logs y bases de datos locales
+logs
+*.log
+*.sqlite

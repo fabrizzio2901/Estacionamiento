@@ -8,15 +8,30 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  password  String
-  name      String
-  role      Role      @default(DRIVER)
-  active    Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  sessions  Session[]
-  payments  Payment[]
+  id           String    @id @default(uuid())
+  email        String    @unique
+  password     String
+  name         String
+  role         Role      @default(DRIVER)
+  active       Boolean   @default(true)
+  // RF-01: Billetera Virtual — saldo puede ser negativo (RF-03)
+  walletBalance Float    @default(0)
+  createdAt    DateTime  @default(now())
+  sessions     Session[]
+  payments     Payment[]
+  topUps       WalletTopUp[]
+}
+
+// RF-01 / RF-02: Registro de recargas a la billetera vía Stripe Test Mode
+model WalletTopUp {
+  id                 String        @id @default(uuid())
+  userId             String
+  amount             Float
+  status             TopUpStatus   @default(PENDING)
+  stripePaymentId    String?
+  stripeClientSecret String?
+  createdAt          DateTime      @default(now())
+  user               User          @relation(fields: [userId], references: [id])
 }
 
 model ParkingSpace {
@@ -32,42 +47,43 @@ model ParkingSpace {
 }
 
 model PricingRule {
-  id          String   @id @default(uuid())
-  name        String
-  type        PricingType @default(HOURLY)
+  id           String      @id @default(uuid())
+  name         String
+  type         PricingType @default(HOURLY)
   pricePerHour Float?
-  ranges      Json?    // [{ fromHour: 0, toHour: 2, price: 20 }, ...]
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  ranges       Json?
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 }
 
 model Session {
   id             String        @id @default(uuid())
   userId         String
-  parkingSpaceId String
+  parkingSpaceId String?
   entryTime      DateTime      @default(now())
   exitTime       DateTime?
   durationMins   Int?
+  amount         Float?
   status         SessionStatus @default(ACTIVE)
   user           User          @relation(fields: [userId], references: [id])
-  parkingSpace   ParkingSpace  @relation(fields: [parkingSpaceId], references: [id])
+  parkingSpace   ParkingSpace? @relation(fields: [parkingSpaceId], references: [id])
   payment        Payment?
   createdAt      DateTime      @default(now())
 }
 
 model Payment {
-  id              String        @id @default(uuid())
-  sessionId       String        @unique
-  userId          String
-  amount          Float
-  status          PaymentStatus @default(PENDING)
-  method          String?
-  stripePaymentId String?
+  id                 String        @id @default(uuid())
+  sessionId          String        @unique
+  userId             String
+  amount             Float
+  status             PaymentStatus @default(PENDING)
+  method             String?
+  stripePaymentId    String?
   stripeClientSecret String?
-  createdAt       DateTime      @default(now())
-  session         Session       @relation(fields: [sessionId], references: [id])
-  user            User          @relation(fields: [userId], references: [id])
+  createdAt          DateTime      @default(now())
+  session            Session       @relation(fields: [sessionId], references: [id])
+  user               User          @relation(fields: [userId], references: [id])
 }
 
 enum Role {
@@ -86,6 +102,12 @@ enum SessionStatus {
 }
 
 enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum TopUpStatus {
   PENDING
   PAID
   FAILED

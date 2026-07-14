@@ -1,10 +1,15 @@
+
 require('dotenv').config();
+console.log('OPENAI_API_KEY cargada:', !!process.env.OPENAI_API_KEY);
+console.log('AI_MODEL:', process.env.AI_MODEL);
 const express = require('express');
 const { createServer } = require('http');
+const assistantRoutes = require('./routes/assistant');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 
+const walletRoutes    = require('./routes/wallet'); // RF-01/02/03
 const authRoutes      = require('./routes/auth');
 const spacesRoutes    = require('./routes/spaces');
 const sessionsRoutes  = require('./routes/sessions');
@@ -14,6 +19,7 @@ const paymentsRoutes  = require('./routes/payments');
 const reportsRoutes   = require('./routes/reports');
 const pricingRoutes   = require('./routes/pricing');
 const qrRoutes        = require('./routes/qr');
+
 
 const { initMQTT } = require('./services/mqttService');
 
@@ -31,6 +37,7 @@ const io = new Server(httpServer, {
 
 // Stripe webhook necesita el body RAW — debe ir ANTES de express.json()
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+app.use('/api/wallet/webhook',   express.raw({ type: 'application/json' })); // <--- AGREGA ESTA
 
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
@@ -51,6 +58,8 @@ app.use('/api/payments', paymentsRoutes);
 app.use('/api/reports',  reportsRoutes);
 app.use('/api/pricing',  pricingRoutes);
 app.use('/api/qr',       qrRoutes);
+app.use('/api/wallet',   walletRoutes); // <--- AGREGA ESTA (RF-01/02/03)
+app.use('/api/assistant', assistantRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

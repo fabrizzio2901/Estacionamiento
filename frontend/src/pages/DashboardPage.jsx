@@ -5,6 +5,8 @@ import ParkingGrid from '../components/ParkingGrid';
 import DriverPanel from '../components/DriverPanel';
 import AdminPanel from '../components/AdminPanel';
 import PaymentPage from './PaymentPage';
+import WalletPage from './WalletPage';
+import ParkingAssistant from '../components/ParkingAssistant';
 
 const NAV_ITEMS = [
   {
@@ -16,8 +18,12 @@ const NAV_ITEMS = [
     icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
   },
   {
-    id: 'payments', label: 'Pagos', roles: ['DRIVER'],
+    id: 'wallet', label: 'Billetera', roles: ['DRIVER'],
     icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>,
+  },
+  {
+    id: 'payments', label: 'Pagos', roles: ['DRIVER'],
+    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>,
   },
   {
     id: 'admin', label: 'Admin', roles: ['ADMIN'],
@@ -32,7 +38,6 @@ export default function DashboardPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const visibleNav = NAV_ITEMS.filter(item => item.roles.includes(user?.role));
-
   const handleLogout = () => { logout(); navigate('/'); };
 
   return (
@@ -50,7 +55,7 @@ export default function DashboardPage() {
             </div>
             <span className="font-display text-xl font-bold text-white">ParkIQ</span>
             <span className="hidden sm:block text-xs font-mono text-parking-muted bg-parking-surface px-2 py-0.5 rounded-full border border-parking-border">
-              v2.0
+              v3.0
             </span>
           </div>
 
@@ -93,10 +98,10 @@ export default function DashboardPage() {
         </div>
 
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-parking-border bg-parking-surface px-4 py-3 flex gap-2">
+          <div className="md:hidden border-t border-parking-border bg-parking-surface px-4 py-3 flex gap-2 overflow-x-auto">
             {visibleNav.map(item => (
               <button key={item.id} onClick={() => { setActiveTab(item.id); setMobileMenuOpen(false); }}
-                className={`flex-1 flex flex-col items-center gap-1 py-2 px-2 rounded-xl text-xs font-body font-medium transition-all ${
+                className={`flex-shrink-0 flex flex-col items-center gap-1 py-2 px-3 rounded-xl text-xs font-body font-medium transition-all ${
                   activeTab === item.id ? 'bg-parking-accent text-white' : 'text-parking-muted'
                 }`}>
                 {item.icon}
@@ -110,13 +115,16 @@ export default function DashboardPage() {
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
         {activeTab === 'map'      && <ParkingGrid />}
         {activeTab === 'session'  && user?.role === 'DRIVER' && <DriverPanel />}
+        {activeTab === 'wallet'   && user?.role === 'DRIVER' && <WalletPage />}
         {activeTab === 'payments' && user?.role === 'DRIVER' && <PaymentPage />}
         {activeTab === 'admin'    && user?.role === 'ADMIN'  && <AdminPanel />}
       </main>
 
+<ParkingAssistant />
+
       <footer className="border-t border-parking-border py-4 px-4">
         <p className="text-center text-xs text-parking-muted font-mono">
-          ParkIQ v2.0 © 2024 — RF4 · RF5 · RF7 implementados
+          ParkIQ v3.0 © 2024 — RF-01…RF-19 implementados
         </p>
       </footer>
     </div>
