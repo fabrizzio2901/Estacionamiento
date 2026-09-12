@@ -1,259 +1,122 @@
-# 🚗 ParkIQ — Sistema de Estacionamiento Inteligente
+# ParkIQ — prototipo de gestión de estacionamiento
 
-Sistema full-stack para gestión de estacionamiento en tiempo real con sensores físicos.
+[English](README.en.md)
 
-## 🏗️ Stack Tecnológico
+Aplicación web para explorar la administración de cajones, estancias, tarifas y saldo de conductores. Incluye un frontend React y una API Express con PostgreSQL.
 
-| Capa | Tecnología |
-|------|-----------|
-| Backend | Node.js + Express |
-| ORM | Prisma + PostgreSQL |
-| Tiempo real | Socket.io |
-| Sensores | MQTT + HTTP POST |
-| Auth | JWT |
-| Frontend | React 18 + Vite |
-| UI | Tailwind CSS |
-| Gráficas | Recharts |
+**Estado:** prototipo para evaluación local. Las pantallas de pago simulan la captura de tarjeta; la integración de cobro está incompleta y requiere correcciones de autorización y confirmación.
 
----
+## Alcance implementado
 
-## ⚡ Inicio Rápido
+- Registro e inicio de sesión con JWT y vistas de conductor y administrador.
+- Gestión de cajones y tarifas; consulta de estancias y reportes.
+- Actualizaciones de ocupación mediante Socket.IO.
+- Recepción de estados de sensores por HTTP y, opcionalmente, MQTT.
+- Generación de tokens QR y rutas de entrada/salida.
+- Modelos y rutas de pagos, billetera y recargas.
+- Ruta de asistente que consulta tarifas y disponibilidad con un servicio externo configurable.
 
-### 1. Prerrequisitos
-- Node.js 18+
-- PostgreSQL corriendo
-- (Opcional) Broker MQTT como Mosquitto
+Que existan rutas y pantallas no implica que todas las integraciones estén completas o verificadas con hardware y proveedores reales.
 
-### 2. Backend
+## Tecnologías
+
+React 18, Vite 5, Tailwind CSS 3, Axios, React Router, Recharts, Node.js, Express, Prisma 5, PostgreSQL, Socket.IO y MQTT. El backend declara SDK de Stripe y OpenAI para las integraciones opcionales.
+
+## Instalación local
+
+Necesitas Git, Node.js y npm, y una instancia PostgreSQL de desarrollo. Prepara una base **vacía y dedicada**, por ejemplo `parkiq_demo`, con un usuario local autorizado. La versión exacta de PostgreSQL no está fijada en el repositorio.
 
 ```bash
-cd backend
-npm install
+git clone https://github.com/fabrizzio2901/Estacionamiento.git
+cd Estacionamiento/backend
+npm ci
+```
 
-# Copiar variables de entorno
-cp .env.example .env
-# Editar .env con tus credenciales de PostgreSQL
+Crea `backend/.env` con tus valores locales. Este ejemplo es ficticio:
 
-# Crear tablas y datos iniciales
+```dotenv
+DATABASE_URL="postgresql://demo_user:REEMPLAZAR@localhost:5432/parkiq_demo?schema=public"
+JWT_SECRET="REEMPLAZAR_POR_UN_SECRETO_LOCAL_ALEATORIO"
+QR_SECRET="REEMPLAZAR_POR_OTRO_SECRETO_LOCAL_ALEATORIO"
+PORT=4000
+FRONTEND_URL="http://localhost:3000"
+TARIFA_POR_HORA=20
+```
+
+Genera valores distintos para los dos secretos; por ejemplo, ejecuta dos veces:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+No subas `.env` al repositorio. Con la conexión apuntando a la base vacía de demostración:
+
+```bash
+npm run db:generate
 npm run db:push
 npm run db:seed
-
-# Iniciar servidor
 npm run dev
 ```
 
-El servidor corre en: `http://localhost:4000`
+**El seed elimina pagos y sesiones previos.** Úsalo solo en la base de demostración; contiene cuentas de prueba cuyas credenciales muestra al terminar. Esas cuentas no son apropiadas para un despliegue público.
 
-### 3. Frontend
+El backend usa `http://localhost:4000`. En otra terminal, desde la raíz del repositorio:
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
-La app corre en: `http://localhost:3000`
+Abre `http://localhost:3000`. El proxy de Vite dirige `/api` y `/socket.io` al backend.
 
-### 4. Credenciales de prueba
-| Rol | Email | Contraseña |
-|-----|-------|-----------|
-| Admin | admin@parking.mx | admin123 |
-| Conductor | conductor@parking.mx | user123 |
+## Ejemplo de comprobación
 
----
+Con el backend iniciado:
 
-## 📡 Integración de Sensores
+```powershell
+Invoke-RestMethod http://localhost:4000/api/health
+```
 
-### Opción A: HTTP POST (más sencillo)
-
-Envía una petición al endpoint desde tu microcontrolador (ESP32, Arduino, Raspberry Pi):
+O con curl:
 
 ```bash
-# Cajón se ocupa
-curl -X POST http://localhost:4000/api/sensors/update \
-  -H "Content-Type: application/json" \
-  -d '{"sensorId": "SENSOR_A01", "status": 1}'
-
-# Cajón se libera
-curl -X POST http://localhost:4000/api/sensors/update \
-  -H "Content-Type: application/json" \
-  -d '{"sensorId": "SENSOR_A01", "status": 0}'
+curl http://localhost:4000/api/health
 ```
 
-### Opción B: MQTT
+La respuesta esperada contiene `status: "ok"`. Esta ruta no comprueba por sí sola la conexión con PostgreSQL. Después entra con una cuenta de prueba del seed y revisa los cajones.
 
-1. Instalar Mosquitto: `brew install mosquitto` o `apt install mosquitto`
-2. Agregar en `.env`: `MQTT_BROKER_URL=mqtt://localhost:1883`
-3. Reiniciar backend
-4. Publicar mensajes:
+## Integraciones opcionales
 
-```bash
-# Desde tu sensor físico o para pruebas:
-mosquitto_pub -t "parking/sensor/SENSOR_A01" -m '{"status": 1}'
-mosquitto_pub -t "parking/sensor/SENSOR_A01" -m '{"status": 0}'
-```
+| Integración | Variables del backend |
+|---|---|
+| Stripe | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`; para recargas, `STRIPE_WALLET_WEBHOOK_SECRET` o el secreto de webhook general |
+| MQTT | `MQTT_BROKER_URL`; opcionales `MQTT_USERNAME`, `MQTT_PASSWORD`, `MQTT_TOPIC_PREFIX` |
+| Asistente | `OPENAI_API_KEY`, `AI_MODEL` |
+| Caducidad JWT | `JWT_EXPIRES_IN` |
 
-### Código de ejemplo para ESP32 (HTTP)
+Déjalas sin configurar si no vas a probar esas funciones. Stripe debe evaluarse exclusivamente con datos de prueba. La interfaz actual no ejecuta la confirmación de tarjeta mediante Stripe Elements; no introduzcas tarjetas reales. El asistente requiere un servicio externo y puede generar consumo.
 
-```cpp
-#include <WiFi.h>
-#include <HTTPClient.h>
+## Estructura
 
-const char* ssid = "TU_WIFI";
-const char* password = "TU_PASSWORD";
-const char* serverUrl = "http://192.168.1.X:4000/api/sensors/update";
-const char* sensorId = "SENSOR_A01";
+- `frontend/src/pages/`: acceso, dashboard, pagos y billetera.
+- `frontend/src/components/`: paneles de administración, ocupación y QR.
+- `backend/src/routes/`: rutas de la API.
+- `backend/src/services/`: sensores y MQTT.
+- `backend/prisma/schema.prisma`: modelos.
+- `backend/prisma/seed.js`: datos de demostración.
 
-const int SENSOR_PIN = 5; // Pin del sensor infrarrojo/ultrasonico
+## Verificación y límites
 
-void setup() {
-  Serial.begin(115200);
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) delay(500);
-  Serial.println("WiFi conectado");
-  pinMode(SENSOR_PIN, INPUT);
-}
+El frontend se instaló desde el lockfile y compiló durante la revisión del 11 de septiembre de 2026. La compilación emitió avisos de configuración y tamaño de bundle. No se ejecutaron la base de datos, el seed, el backend completo, cobros, hardware ni el asistente.
 
-void enviarEstado(int status) {
-  if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    http.begin(serverUrl);
-    http.addHeader("Content-Type", "application/json");
+Antes de considerar un despliegue público se deben corregir:
 
-    String payload = "{\"sensorId\":\"" + String(sensorId) + "\",\"status\":" + status + "}";
-    int code = http.POST(payload);
+- La asignación de rol administrador desde el registro público.
+- La protección de rutas de sensores y entrada/salida.
+- Las confirmaciones de pago que dependen de condiciones incompletas.
+- La integración real del formulario con el proveedor de pagos.
+- Las pruebas de autorización, concurrencia, saldos y tarifas.
 
-    Serial.printf("Sensor: %d, HTTP: %d\n", status, code);
-    http.end();
-  }
-}
+No se dispone de métricas de operación ni una demostración pública verificada.
 
-int lastStatus = -1;
-void loop() {
-  int currentStatus = digitalRead(SENSOR_PIN) == LOW ? 1 : 0; // Ajustar según sensor
-  if (currentStatus != lastStatus) {
-    enviarEstado(currentStatus);
-    lastStatus = currentStatus;
-    delay(500); // Debounce
-  }
-  delay(100);
-}
-```
-
----
-
-## 📁 Estructura del Proyecto
-
-```
-parking-system/
-├── backend/
-│   ├── prisma/
-│   │   ├── schema.prisma      # Modelos de BD (User, ParkingSpace, Session, Payment)
-│   │   └── seed.js            # Datos iniciales
-│   └── src/
-│       ├── server.js          # Entry point + Socket.io
-│       ├── middleware/
-│       │   └── auth.js        # Middleware JWT
-│       ├── routes/
-│       │   ├── auth.js        # Login/Register/Me
-│       │   ├── spaces.js      # Cajones de estacionamiento
-│       │   ├── sessions.js    # Sesiones de usuario
-│       │   ├── admin.js       # Panel admin (stats, reportes)
-│       │   └── sensors.js     # Endpoint HTTP para sensores
-│       └── services/
-│           ├── sensorService.js  # Lógica de negocio (tarifas, sesiones)
-│           └── mqttService.js    # Integración MQTT
-│
-└── frontend/
-    └── src/
-        ├── context/
-        │   └── AuthContext.jsx   # Estado global de autenticación
-        ├── hooks/
-        │   └── useSocket.js      # Hook para Socket.io
-        ├── components/
-        │   ├── ParkingGrid.jsx   # Mapa interactivo en tiempo real
-        │   ├── DriverPanel.jsx   # Panel del conductor (sesión activa)
-        │   └── AdminPanel.jsx    # Dashboard admin + gráficas
-        └── pages/
-            ├── LoginPage.jsx     # Login/Registro
-            └── DashboardPage.jsx # Dashboard principal
-```
-
----
-
-## 🔌 API Endpoints
-
-### Auth
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| POST | `/api/auth/register` | Registro de usuario |
-| POST | `/api/auth/login` | Inicio de sesión |
-| GET | `/api/auth/me` | Usuario actual |
-
-### Sensores
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| POST | `/api/sensors/update` | Recibir dato de sensor |
-| GET | `/api/sensors` | Listar sensores |
-
-### Cajones
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| GET | `/api/spaces` | Todos los cajones con estado |
-| GET | `/api/spaces/stats` | Estadísticas de ocupación |
-
-### Sesiones (requiere auth)
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| GET | `/api/sessions/active` | Sesión activa del usuario |
-| GET | `/api/sessions/history` | Historial de sesiones |
-| POST | `/api/sessions/:id/pay` | Registrar pago |
-
-### Admin (requiere auth + rol ADMIN)
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| GET | `/api/admin/stats` | Estadísticas generales |
-| GET | `/api/admin/revenue/daily` | Ingresos de últimos 7 días |
-| GET | `/api/admin/sessions` | Todas las sesiones |
-| POST | `/api/admin/spaces` | Crear cajón |
-
----
-
-## 🔄 Flujo de datos en tiempo real
-
-```
-Sensor físico (ESP32/Arduino)
-        ↓ HTTP POST o MQTT
-    Backend (Node.js)
-        ↓ Actualiza PostgreSQL
-        ↓ Calcula tarifa (si aplica)
-        ↓ Emite evento Socket.io "spaceUpdate"
-    Frontend (React)
-        ↓ Recibe evento en tiempo real
-        ↓ Actualiza color del cajón (Verde/Rojo)
-        ↓ Muestra costo acumulado
-```
-
----
-
-## 🎨 Paleta de colores
-
-| Estado | Color | Hex |
-|--------|-------|-----|
-| Libre | Verde neón | `#00E5A0` |
-| Ocupado | Rojo | `#FF3B5C` |
-| Acento | Violeta | `#6C63FF` |
-| Dinero | Dorado | `#FFD166` |
-
----
-
-## 📦 Variables de Entorno
-
-```env
-# Backend (.env)
-DATABASE_URL="postgresql://user:pass@localhost:5432/parking_db"
-JWT_SECRET="clave_secreta_muy_larga"
-PORT=4000
-MQTT_BROKER_URL="mqtt://localhost:1883"  # Opcional
-TARIFA_POR_HORA=20                        # MXN por hora
-```
