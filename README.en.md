@@ -120,3 +120,6 @@ Before a public deployment, address:
 
 There are no verified operational metrics or a verified public demonstration.
 
+## My contribution
+
+My role was full-stack development, contributing to the React frontend and the Express/PostgreSQL backend. The integration status and limitations above describe the published version.

@@ -120,3 +120,6 @@ Antes de considerar un despliegue público se deben corregir:
 
 No se dispone de métricas de operación ni una demostración pública verificada.
 
+## Mi participación
+
+Mi rol fue de desarrollo full stack, con participación en el frontend React y el backend Express con PostgreSQL. El estado de las integraciones y las limitaciones descritas corresponden a la versión publicada.
